@@ -62,26 +62,25 @@ class LenstraResult:
             merged.failed_attempts += r.failed_attempts
         return merged
 
-def __save_checkpoint(curve, point, b, id, output_dir):
-    os.makedirs(output_dir, exist_ok=True)
-    pickle_obj({'curve': curve, 'point': point, 'time': datetime.now(), 'b': b}, os.path.join(output_dir, str(b) + '.p'))
+def __save_checkpoint(curve, point, b, id):
+    thread_dir = str(id)
+    os.makedirs(thread_dir, exist_ok=True)
+    pickle_obj({'curve': curve, 'point': point, 'time': datetime.now(), 'b': b}, os.path.join(thread_dir, str(b) + '.p'))
 
-def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, output_dir=None) -> Tuple[bool, List[LenstraAttempt]]:
-    proc_out_dir = os.path.join(output_dir, str(proc_id))
+def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1) -> Tuple[bool, List[LenstraAttempt]]:
     result = LenstraResult(number=n, success_attempt=None, failed_attempts=[], start_time=datetime.now(), end_time=None)
     searching = True
     B = 10**8   
     b = 2
     while searching and not is_cancelled():
         curve, point = rand_curve_and_point(n)
-        print(f'Proc {proc_id} Attempting to factor with curve: {curve} and point: {point}')
+        print(f'Attempting to factor with curve: {curve} and point: {point}')
         start_time = datetime.now()
         prod = point
         while searching and b < B and not is_cancelled():
-            if b % 10_000 == 0:
-                print(f'Proc {proc_id} at attempt {b}')
-                if output_dir is not None:
-                    __save_checkpoint(curve, point, b, proc_id, proc_out_dir)
+            if math.log(10) // math.log(b) == math.log(10) / math.log(b):
+                print(f'At attempt {b}')
+                __save_checkpoint(curve, point, b, proc_id)
             try:
                 prod *= b
                 b += 1
@@ -104,15 +103,14 @@ def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, o
     result.end_time = datetime.now()
     return result
 
-def factor_for_queue(n: int, queue: mp.Queue, cancel_event: mp.Event, proc_id: int, output_dir: os.PathLike):
-    queue.put(factor(n, cancel_event.is_set, proc_id, output_dir))
+def factor_for_queue(n: int, queue: mp.Queue, cancel_event: mp.Event, proc_id: int):
+    queue.put(factor(n, cancel_event.is_set, proc_id))
 
 def run_lenstra_parallel(n: int, num_threads: int, output_path: os.PathLike) -> LenstraResult:
     cancel_event = mp.Event()
     queue = mp.Queue()
+    procs = [mp.Process(target=lambda: factor_for_queue(n, queue, cancel_event, i)) for i in range(num_threads)]
     start_time = datetime.now()
-    output_dir = os.path.join(output_path, str(start_time))
-    procs = [mp.Process(target=lambda: factor_for_queue(n, queue, cancel_event, i, output_dir)) for i in range(num_threads)]
     print(f'Starting factorization at {start_time}')
     for p in procs:
         p.start()
@@ -125,8 +123,7 @@ def run_lenstra_parallel(n: int, num_threads: int, output_path: os.PathLike) -> 
     final_results = LenstraResult.merge_results(n, results)
     final_results.start_time = start_time
     final_results.end_time = end_time
-    final_result_path = os.path.join(output_path, 'results.p')
-    pickle_obj(final_results, final_result_path)
+    pickle_obj(final_results, output_path)
     return final_results
 
 
@@ -136,7 +133,7 @@ def main():
     # default = 7349 * 5281
     number = default if len(sys.argv) == 1 else int(sys.argv[1])
     # print(f'Starting at {start_time}')
-    res = run_lenstra_parallel(number, 4, 'results')
+    res = run_lenstra_parallel(number, 4, 'results.p')
     factors = res.success_attempt.factors
     print(f'Factored: {res.number} as {factors[0]} * {factors[1]} in {res.get_total_time()}')
     # end_time = datetime.now()
