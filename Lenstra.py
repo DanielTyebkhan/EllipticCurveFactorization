@@ -40,6 +40,7 @@ class LenstraAttempt:
     number: int
     factors: Tuple[int, int]
 
+
 @dataclass
 class LenstraResult:
     number: int
@@ -62,9 +63,11 @@ class LenstraResult:
             merged.failed_attempts += r.failed_attempts
         return merged
 
+
 def __save_checkpoint(curve, point, b, id, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     pickle_obj({'curve': curve, 'point': point, 'time': datetime.now(), 'b': b}, os.path.join(output_dir, str(b) + '.p'))
+
 
 def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, output_dir=None) -> Tuple[bool, List[LenstraAttempt]]:
     proc_out_dir = os.path.join(output_dir, str(proc_id))
@@ -104,15 +107,17 @@ def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, o
     result.end_time = datetime.now()
     return result
 
+
 def factor_for_queue(n: int, queue: mp.Queue, cancel_event: mp.Event, proc_id: int, output_dir: os.PathLike):
     queue.put(factor(n, cancel_event.is_set, proc_id, output_dir))
+
 
 def run_lenstra_parallel(n: int, num_threads: int, output_path: os.PathLike) -> LenstraResult:
     cancel_event = mp.Event()
     queue = mp.Queue()
     start_time = datetime.now()
     output_dir = os.path.join(output_path, str(start_time))
-    procs = [mp.Process(target=lambda: factor_for_queue(n, queue, cancel_event, i, output_dir)) for i in range(num_threads)]
+    procs = [mp.Process(target=factor_for_queue, args=[n, queue, cancel_event, i, output_dir]) for i in range(num_threads)]
     print(f'Starting factorization at {start_time}')
     for p in procs:
         p.start()
