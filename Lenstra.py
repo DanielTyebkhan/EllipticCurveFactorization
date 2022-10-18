@@ -1,3 +1,4 @@
+from cmath import log10
 from dataclasses import dataclass
 from datetime import datetime
 import multiprocessing as mp
@@ -61,17 +62,25 @@ class LenstraResult:
             merged.failed_attempts += r.failed_attempts
         return merged
 
+def __save_checkpoint(curve, point, b, id):
+    thread_dir = str(id)
+    os.makedirs(thread_dir, exist_ok=True)
+    pickle_obj({'curve': curve, 'point': point, 'time': datetime.now(), 'b': b}, os.path.join(thread_dir, str(b) + '.p'))
 
-def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False) -> Tuple[bool, List[LenstraAttempt]]:
+def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1) -> Tuple[bool, List[LenstraAttempt]]:
     result = LenstraResult(number=n, success_attempt=None, failed_attempts=[], start_time=datetime.now(), end_time=None)
     searching = True
     B = 10**8   
     b = 2
     while searching and not is_cancelled():
         curve, point = rand_curve_and_point(n)
+        print(f'Attempting to factor with curve: {curve} and point: {point}')
         start_time = datetime.now()
         prod = point
         while searching and b < B and not is_cancelled():
+            if math.log(10) // math.log(b) == math.log(10) / math.log(b):
+                print(f'At attempt {b}')
+                __save_checkpoint(curve, point, b, proc_id)
             try:
                 prod *= b
                 b += 1
@@ -94,18 +103,20 @@ def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False) -> Tuple[bool
     result.end_time = datetime.now()
     return result
 
-def factor_for_queue(n: int, queue: mp.Queue, cancel_event: mp.Event):
-    queue.put(factor(n, cancel_event.is_set))
+def factor_for_queue(n: int, queue: mp.Queue, cancel_event: mp.Event, proc_id: int):
+    queue.put(factor(n, cancel_event.is_set, proc_id))
 
 def run_lenstra_parallel(n: int, num_threads: int, output_path: os.PathLike) -> LenstraResult:
     cancel_event = mp.Event()
     queue = mp.Queue()
-    procs = [mp.Process(target=lambda: factor_for_queue(n, queue, cancel_event)) for _ in range(num_threads)]
+    procs = [mp.Process(target=lambda: factor_for_queue(n, queue, cancel_event, i)) for i in range(num_threads)]
     start_time = datetime.now()
+    print(f'Starting factorization at {start_time}')
     for p in procs:
         p.start()
     results = [queue.get()]
     end_time = datetime.now()
+    print(f'Finished factorization at {end_time}')
     cancel_event.set()
     for _ in range(num_threads - 1):
         results.append(queue.get())
@@ -114,10 +125,12 @@ def run_lenstra_parallel(n: int, num_threads: int, output_path: os.PathLike) -> 
     final_results.end_time = end_time
     pickle_obj(final_results, output_path)
     return final_results
-    
+
+
+
 def main():
-    # default = 6280324898167756003198391309579692155707 * 5301840505616489805533768304463882666999
-    default = 97 * 83
+    default = 6280324898167756003198391309579692155707 * 5301840505616489805533768304463882666999
+    # default = 7349 * 5281
     number = default if len(sys.argv) == 1 else int(sys.argv[1])
     # print(f'Starting at {start_time}')
     res = run_lenstra_parallel(number, 4, 'results.p')
