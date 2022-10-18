@@ -132,6 +132,8 @@ def run_lenstra_parallel(n: int, num_threads: int, output_path: os.PathLike) -> 
     final_results.end_time = end_time
     final_result_path = os.path.join(output_path, 'results.p')
     pickle_obj(final_results, final_result_path)
+    factors = final_results.success_attempt.factors
+    print(f'Factored: {final_results.number} as {factors[0]} * {factors[1]} in {final_results.get_total_time()}')
     return final_results
 
 
@@ -143,7 +145,6 @@ def main():
     # print(f'Starting at {start_time}')
     res = run_lenstra_parallel(number, 4, 'results')
     factors = res.success_attempt.factors
-    print(f'Factored: {res.number} as {factors[0]} * {factors[1]} in {res.get_total_time()}')
     # end_time = datetime.now()
     # print(f'Ending at {end_time}')
     # print(f'Total Time: {end_time - start_time}')
