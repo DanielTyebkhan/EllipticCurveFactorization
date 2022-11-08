@@ -2,22 +2,37 @@ from dataclasses import dataclass
 from datetime import datetime
 import multiprocessing as mp
 import os
-from time import time
 from typing import Callable, List, Optional, Tuple
+import sage.all # needed to make sage imports work
 
 import sys
 import random
 import math
-from EllipticCurves import EllipticCurveModN
+import sage.schemes.elliptic_curves.constructor as EC
+import sage.rings.finite_rings.integer_mod_ring as IntModRings
 
 from io_helpers import pickle_obj
+
+def rand_curve_and_point(n):
+    '''
+    Algorithm from Washington
+    '''
+    F = IntModRings.IntegerModRing(n)
+    A = random.randint(0, n)
+    u = random.randint(0, n)
+    v = random.randint(0, n)
+    C = (v**2 - u**3 - A*u) % n
+    curve = EC.EllipticCurve(F, [A, C])
+    point = curve([u, v])
+    return curve, point
+
 
 @dataclass
 class LenstraAttempt:
     start_time: datetime
     end_time: datetime
     success: bool
-    curve: EllipticCurveModN
+    curve: EC.EllipticCurve
     point: List[int]
     max_value_checked: int
     number: int
@@ -59,7 +74,7 @@ def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, o
     B = 10**8   
     b = 2
     while searching and not is_cancelled():
-        curve, point = EllipticCurveModN.rand_curve_and_point_mod_n(n)
+        curve, point = rand_curve_and_point(n)
         print(f'Proc {proc_id} Attempting to factor with curve: {curve} and point: {point}')
         start_time = datetime.now()
         prod = point
@@ -68,12 +83,14 @@ def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, o
                 print(f'Proc {proc_id} at attempt {b}')
                 if output_dir is not None:
                     __save_checkpoint(curve, point, b, proc_id, proc_out_dir)
-            prod = curve.multiply_point(b, prod)
-            if isinstance(prod, int):
-                factor1 = math.gcd(prod, n)
+            try:
+                prod *= b
+                b += 1
+            except ZeroDivisionError as ex:
+                failed_inverse = int(ex.args[0].split()[2])
+                factor1 = math.gcd(failed_inverse, n)
                 factor2 = n // factor1
                 searching = False
-            b += 1
         end_time = datetime.now()
         factors = None if searching else (factor1, factor2)
         success = not searching

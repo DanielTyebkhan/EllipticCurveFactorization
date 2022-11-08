@@ -1,5 +1,6 @@
 import random
-from typing import Tuple
+from typing import Union, Tuple
+import math_helpers
 
 ProjectivePoint = Tuple[int, int, int]
 
@@ -23,35 +24,53 @@ class EllipticCurveModN:
         n = self.modulus
         return (x % n, y % n, 1)
 
-    def add_points(self, p1: ProjectivePoint, p2: ProjectivePoint) -> ProjectivePoint:
+    def multiply_point(self, multiplicand: int, point: ProjectivePoint):
+        prod = POINT_AT_INFIITY
+        for i in range(multiplicand):
+            prod = self.add_points(prod, point)
+        return prod
+
+    def add_points(self, p1: ProjectivePoint, p2: ProjectivePoint) -> Union[ProjectivePoint, int]:
+        """
+        Adds two points on the curve. 
+        If the point addition fails, returns the number which had no inverse mod n
+        """
         if is_infinity(p1):
             return p2
         if is_infinity(p2):
             return p1
 
-        x1, y1, z1 = p1
-        x2, y2, z2 = p2
+        n = self.modulus
+        x1, y1, _ = p1
+        x2, y2, _ = p2
         if p1 == p2:
             if y1 == 0:
                 x3, y3, z3 = POINT_AT_INFIITY    
             else:
-                m = (3 * x1**2 + self.A) / (2 * y1)
+                denom = 2 * y1
+                inv = math_helpers.mult_inverse(denom, n)
+                if inv is None:
+                    return denom
+                m = (3 * x1**2 + self.A) * inv
                 x3 = m**2 - 2* x1
                 y3 = m * (x1-x3) - y1
                 z3 = 1
         else:
             if x1 != x2:
-                m = (y2 - y1) / (x2 - x1)
+                denom = x2 - x1
+                inv = math_helpers.mult_inverse(denom, n)
+                if inv is None:
+                    return denom
+                m = (y2 - y1) * inv
                 x3 = m**2 - x1 - x2
                 y3 = m * (x1 - x3) - y1
                 z3 = 1
             else:
                 x3, y3, z3 = POINT_AT_INFIITY
-        n = self.modulus
         return x3 % n, y3 % n, z3 % n
 
 
-    def rand_curve_and_point_mod_n(n):
+    def rand_curve_and_point_mod_n(n: int):
         '''
         Algorithm from Washington, page 192
         '''
