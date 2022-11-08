@@ -8,7 +8,7 @@ from typing import Callable, List, Optional, Tuple
 import sys
 import random
 import math
-from EllipticCurves import EllipticCurveModN
+from EllipticCurves import POINT_AT_INFIITY, EllipticCurveModN
 
 from io_helpers import pickle_obj
 
@@ -52,23 +52,27 @@ def __save_checkpoint(curve, point, b, id, output_dir):
     pickle_obj({'curve': curve, 'point': point, 'time': datetime.now(), 'b': b}, os.path.join(output_dir, str(b) + '.p'))
 
 
-def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, output_dir=None) -> Tuple[bool, List[LenstraAttempt]]:
-    proc_out_dir = os.path.join(output_dir, str(proc_id))
+def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, output_dir=None) -> LenstraResult:
+    saving_output = output_dir is not None
+    if saving_output:
+        proc_out_dir = os.path.join(output_dir, str(proc_id))
     result = LenstraResult(number=n, success_attempt=None, failed_attempts=[], start_time=datetime.now(), end_time=None)
     searching = True
     B = 10**8   
     b = 2
     while searching and not is_cancelled():
         curve, point = EllipticCurveModN.rand_curve_and_point_mod_n(n)
-        print(f'Proc {proc_id} Attempting to factor with curve: {curve} and point: {point}')
+        print(f'Proc {proc_id} Attempting to factor {n} with curve: {curve} and point: {point}')
         start_time = datetime.now()
         prod = point
         while searching and b < B and not is_cancelled():
             if b % 10_000 == 0:
                 print(f'Proc {proc_id} at attempt {b}')
-                if output_dir is not None:
+                if saving_output:
                     __save_checkpoint(curve, point, b, proc_id, proc_out_dir)
             prod = curve.multiply_point(b, prod)
+            if prod == POINT_AT_INFIITY:
+                break
             if isinstance(prod, int):
                 factor1 = math.gcd(prod, n)
                 factor2 = n // factor1

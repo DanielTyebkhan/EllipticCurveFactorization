@@ -9,6 +9,8 @@ POINT_AT_INFIITY = (0,1,0)
 def is_infinity(point: ProjectivePoint) -> bool:
     return point == POINT_AT_INFIITY
 
+PointOrInt = Union[ProjectivePoint, int]
+
 
 class EllipticCurveModN:
     """
@@ -24,13 +26,15 @@ class EllipticCurveModN:
         n = self.modulus
         return (x % n, y % n, 1)
 
-    def multiply_point(self, multiplicand: int, point: ProjectivePoint):
+    def multiply_point(self, multiplicand: int, point: ProjectivePoint) -> PointOrInt:
         prod = POINT_AT_INFIITY
         for i in range(multiplicand):
             prod = self.add_points(prod, point)
+            if isinstance(prod, int):
+                break
         return prod
 
-    def add_points(self, p1: ProjectivePoint, p2: ProjectivePoint) -> Union[ProjectivePoint, int]:
+    def add_points(self, p1: ProjectivePoint, p2: ProjectivePoint) -> PointOrInt:
         """
         Adds two points on the curve. 
         If the point addition fails, returns the number which had no inverse mod n

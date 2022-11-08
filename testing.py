@@ -1,8 +1,11 @@
 from EllipticCurves import EllipticCurveModN
+from Lenstra import factor
 from math_helpers import mult_inverse
 
 def main():
-    print(mult_inverse(5, 9))
+    n = 5 * 27
+    res = factor(n)
+    print(res.success_attempt.factors)
     # curve, point = EllipticCurveModN.rand_curve_and_point_mod_n(670)
     # sum = point
     # for i in range(2, 8):
