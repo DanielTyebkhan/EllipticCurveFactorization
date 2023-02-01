@@ -27,6 +27,24 @@ class EllipticCurveModN:
         return (x % n, y % n, 1)
 
     def multiply_point(self, multiplicand: int, point: ProjectivePoint) -> PointOrInt:
+        """
+        implementation of double and add method for point mulitplication
+        """
+        bits = reversed([int(i) for i in bin(multiplicand)[2:]])
+        prod = POINT_AT_INFIITY
+        temp = point
+        for bit in bits:
+            if bit == 1:
+                prod = self.add_points(prod, temp)
+                if isinstance(prod, int):
+                    break
+            temp = self.add_points(temp, temp)
+        return prod
+
+    def multiply_point_naive(self, multiplicand: int, point: ProjectivePoint) -> PointOrInt:
+        """
+        Naive implementation of point multiplication
+        """
         prod = POINT_AT_INFIITY
         for i in range(multiplicand):
             prod = self.add_points(prod, point)

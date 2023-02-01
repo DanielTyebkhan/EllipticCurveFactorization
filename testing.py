@@ -1,10 +1,16 @@
+import random
 from EllipticCurves import EllipticCurveModN
-from Lenstra import factor
+import SageLenstra as sl
+from Lenstra import run_lenstra_parallel
 from math_helpers import mult_inverse
 
+
 def main():
-    n = 5 * 27
-    res = factor(n)
+    random.seed(0)
+    n = 2**67 - 1
+    # res = sl.run_lenstra_parallel(n, 6, '')
+    # print(res.success_attempt.factors)
+    res = run_lenstra_parallel(n, 6, '')
     print(res.success_attempt.factors)
     # curve, point = EllipticCurveModN.rand_curve_and_point_mod_n(670)
     # sum = point
