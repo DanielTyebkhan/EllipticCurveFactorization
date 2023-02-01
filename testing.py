@@ -9,7 +9,6 @@ def main():
     random.seed(0)
     n = 2**67 - 1
     # res = sl.run_lenstra_parallel(n, 6, '')
-    # print(res.success_attempt.factors)
     res = run_lenstra_parallel(n, 6, '')
     print(res.success_attempt.factors)
     # curve, point = EllipticCurveModN.rand_curve_and_point_mod_n(670)
