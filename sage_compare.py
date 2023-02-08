@@ -32,7 +32,7 @@ def main():
         sage_curve = EC.EllipticCurve(F, [a, b])
         sage_point = sage_curve([point[0], point[1]])
 
-        samples = random.sample(range(1000000), num_samples)
+        samples = random.sample(range(int(10e15)), num_samples)
         
         for s in samples:
             sage_time += time_op(lambda: s * sage_point)

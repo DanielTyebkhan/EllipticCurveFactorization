@@ -66,7 +66,7 @@ def factor(n: int, is_cancelled: Callable[[], bool]=lambda: False, proc_id=-1, o
         start_time = datetime.now()
         prod = point
         while searching and b < B and not is_cancelled():
-            if b % 10_000 == 0:
+            if b % 10_000_000 == 0:
                 print(f'Proc {proc_id} at attempt {b}')
                 if saving_output:
                     __save_checkpoint(curve, point, b, proc_id, proc_out_dir)
