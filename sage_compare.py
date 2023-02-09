@@ -18,7 +18,7 @@ def time_op(op):
     return (datetime.now() - start_time).microseconds
 
 def main():
-    num_curves = 30
+    num_curves = 300
     sage_time = 0
     my_time = 0
     num_samples = 1000
