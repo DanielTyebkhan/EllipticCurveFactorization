@@ -1,0 +1,7 @@
+cff-version: 1.2.0
+authors:
+  - family-names: Tyebkhan
+    given-names: Daniel
+title: "Simple Lenstra's Implementation"
+version: 1.0.0
+date-released: 2023-02-14
