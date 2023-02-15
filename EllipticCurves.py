@@ -18,6 +18,7 @@ class EllipticCurveModN:
     Formulas from Washington
     """
     def __init__(self, a: int, b: int, modulus: int):
+        # TODO check for a null kernel
         self.A = a
         self.B = b
         self.modulus = modulus
