@@ -18,11 +18,24 @@ class EllipticCurveModN:
     Formulas from Washington
     """
     def __init__(self, a: int, b: int, modulus: int):
+        # TODO check for a null kernel
         self.A = a
         self.B = b
         self.modulus = modulus
+        if self.discriminant() == 0:
+            raise ValueError('Curve was singular')
+
+    def discriminant(self):
+        """
+        Calculates the discriminant of the curve
+        """
+        return -16 * (4 * self.A**3 + 27 * self.B**2)
     
     def point(self, x: int, y: int) -> ProjectivePoint:
+        """
+        Creates a point on the curve represented by the 3-tuple
+            (x mod n, y mod n, 1)
+        """
         n = self.modulus
         return (x % n, y % n, 1)
 
@@ -96,12 +109,18 @@ class EllipticCurveModN:
         '''
         Algorithm from Washington, page 192
         '''
-        A = random.randint(0, n)
-        u = random.randint(0, n)
-        v = random.randint(0, n)
-        C = (v**2 - u**3 - A*u) % n
-        curve = EllipticCurveModN(A, C, n)
-        point = curve.point(u, v)
+        searching = True
+        while searching:
+            A = random.randint(0, n)
+            u = random.randint(0, n)
+            v = random.randint(0, n)
+            C = (v**2 - u**3 - A*u) % n
+            try:
+                curve = EllipticCurveModN(A, C, n)
+                searching = False
+            except ValueError:
+                continue
+            point = curve.point(u, v)
         return curve, point
 
     def __str__(self) -> str:
